@@ -42,12 +42,11 @@ pub fn input_generator(input: &str) -> CratesAndInstructions {
             let mut nums_from_input = line
                 .split_ascii_whitespace()
                 .filter(|str| !str.contains("o"))//all keywords have "o"
-                .map(|x| x.parse::<u32>().unwrap())
-                .map(|x| x - 1); /* make nums fit for vec-indexing */
+                .map(|x| x.parse::<u32>().unwrap());
             InstructionSet {
                 num_times : nums_from_input.next().unwrap(),
-                from : nums_from_input.next().unwrap(),
-                to : nums_from_input.next().unwrap()}
+                from : nums_from_input.next().unwrap() - 1,
+                to : nums_from_input.next().unwrap() - 1}
         })
     .collect();
     /* Return parsed puzzle input */
@@ -71,11 +70,25 @@ pub fn solve_part1 (input: &CratesAndInstructions) -> String {
             crates[x.to as usize].push(var);
         }
     }
-    crts
+    crates
         .into_iter()
-        .map(|stack| stack.last().unwrap())
+        .map(|stack| *stack.last().unwrap())
         .collect::<String>()
 }
 
-//#[aoc(day5, part2)]
-//pub fn solve_part2(input: &[ElfAssignments]) -> u32 
+#[aoc(day5, part2)]
+pub fn solve_part2(input: &CratesAndInstructions) -> String {
+    let CratesAndInstructions {crates : crts, instructions : instr} = input;
+    let mut crates = crts.clone();
+    for x in instr {
+        let ln = crates[x.from as usize].len();
+        let var : Vec<char> = crates[x.from as usize]
+            .drain((ln - x.num_times as usize)..ln)
+            .collect();
+        crates[x.to as usize].extend(var);
+    }
+    crates
+        .into_iter()
+        .map(|stack| *stack.last().unwrap())
+        .collect::<String>()
+}
