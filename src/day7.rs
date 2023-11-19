@@ -79,11 +79,8 @@ pub fn input_generator(input: &str) -> MyGraph {
     }
 }
 
-#[aoc(day7, part1)]
-pub fn solve_part1(input: &MyGraph) -> u32 {
-    let MyGraph {ftree: file_tree, root_node_idx: start} = input;
-    let mut dir_sizes = HashMap::<String,u32>::new();
-    let mut dfs_post = DfsPostOrder::new(&file_tree, *start);
+fn calc_dir_sizes(dir_sizes: &mut HashMap<String,u32>, file_tree: &DiGraph<FileNode, ()>, start: NodeIndex) {
+    let mut dfs_post = DfsPostOrder::new(&file_tree, start);
     /* Graph traversal; build sizes from the bottom up */
     while let Some(dfs) = dfs_post.next(&file_tree) {
         let curr_file_node = &file_tree[dfs];
@@ -104,6 +101,13 @@ pub fn solve_part1(input: &MyGraph) -> u32 {
             FileNodeType::File(_) => (),
         };
     }
+}
+
+#[aoc(day7, part1)]
+pub fn solve_part1(input: &MyGraph) -> u32 {
+    let MyGraph {ftree: file_tree, root_node_idx: start} = input;
+    let mut dir_sizes = HashMap::<String,u32>::new();
+    calc_dir_sizes(&mut dir_sizes, file_tree, *start);
     dir_sizes
         .iter()
         .map(|(_,val)| *val)
@@ -111,8 +115,22 @@ pub fn solve_part1(input: &MyGraph) -> u32 {
         .sum()
 }
 
-//#[aoc(day7, part2)]
-//pub fn solve_part2(input: &str) -> u32 
+#[aoc(day7, part2)]
+pub fn solve_part2(input: &MyGraph) -> u32 {
+    let MyGraph {ftree: file_tree, root_node_idx: start} = input;
+    let mut dir_sizes = HashMap::<String,u32>::new();
+    calc_dir_sizes(&mut dir_sizes, file_tree, *start);
+    
+    const TOTAL_AVAILABLE_SPACE: u32 = 70_000_000u32;
+    const REQ_UNUSED_SPACE: u32 = 30_000_000u32;
+    let target_used_space = TOTAL_AVAILABLE_SPACE - REQ_UNUSED_SPACE;
+    let root_size = dir_sizes.get("/").unwrap();
+    dir_sizes
+        .iter()
+        .map(|(_,val)| *val)
+        .filter(|x| root_size - x <= target_used_space)
+        .min().unwrap()
+}
 
 #[cfg(test)]
 mod tests {
@@ -149,5 +167,10 @@ $ ls
     fn test_day7p1() {
         let input: MyGraph = input_generator(TEST_INPUT);
         assert_eq!(solve_part1(&input), 95437);
+    }
+    #[test]
+    fn test_day7p2() {
+        let input: MyGraph = input_generator(TEST_INPUT);
+        assert_eq!(solve_part2(&input), 24933642);
     }
 }
