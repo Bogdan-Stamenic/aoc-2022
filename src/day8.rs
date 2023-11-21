@@ -20,22 +20,54 @@ impl Forest {
         }
         let tree: u32 = self.index2d(x, y);
         let mut block_count = 0;
-        for idx in 0..=(x-1) {
+        for idx in (0..=(x-1)).rev() {
             if self.index2d(idx, y) >= tree {block_count += 1; break;}
         }
         for idx in (x+1)..self.n_rows {
             if self.index2d(idx, y) >= tree {block_count += 1; break;}
         }
-        for idx in 0..=(y-1) {
+        for idx in (0..=(y-1)).rev() {
             if self.index2d(x, idx) >= tree {block_count += 1; break;}
         }
         for idx in (y+1)..self.m_columns {
             if self.index2d(x, idx) >= tree {block_count += 1; break;}
         }
-        if block_count >= 4 {
+        if block_count == 4 {
             return false;
         }
         true
+    }
+
+    fn calc_scenic_score(&self, x: usize, y: usize) -> u32 {
+        /* Trees on edge have scenic score of zero */
+        if (x == 0) || (x == self.n_rows - 1) {
+            return 0;
+        }
+        if (y == 0) || (y == self.m_columns - 1) {
+            return 0;
+        }
+        let tree: u32 = self.index2d(x, y);
+        let mut left = 0;
+        let mut right = 0;
+        let mut up = 0;
+        let mut down = 0;
+        for idx in (0..=(x-1)).rev() {
+            left += 1;
+            if self.index2d(idx, y) >= tree {break;}
+        }
+        for idx in (x+1)..self.n_rows {
+            right += 1;
+            if self.index2d(idx, y) >= tree {break;}
+        }
+        for idx in (0..=(y-1)).rev() {
+            down += 1;
+            if self.index2d(x, idx) >= tree {break;}
+        }
+        for idx in (y+1)..self.m_columns {
+            up += 1;
+            if self.index2d(x, idx) >= tree {break;}
+        }
+        left * right * down * up
     }
 }
 
@@ -62,18 +94,28 @@ pub fn input_generator(input: &str) -> Forest {
 
 #[aoc(day8, part1)]
 pub fn solve_part1(input: &Forest) -> u32 {
-    let mut ans = 0;
-    for y_idx in 0..input.n_rows {
-        for x_idx in 0..input.m_columns {
+    /* Use math to calculate edges */
+    let mut ans = 2 * input.m_columns + 2 * input.n_rows - 4;
+    /* Check all trees on the inside */
+    for y_idx in 1..(input.n_rows - 1) {
+        for x_idx in 1..(input.m_columns - 1) {
             if input.is_tree_visible(x_idx, y_idx) {ans += 1;}
         }
     }
     ans as u32
 }
 
-//#[aoc(day8, part2)]
-//pub fn solve_part2(input: &Forest) -> u32 {
-//}
+#[aoc(day8, part2)]
+pub fn solve_part2(input: &Forest) -> u32 {
+    let mut ans = 0;
+    for y_idx in 1..(input.n_rows - 1) {
+        for x_idx in 1..(input.m_columns - 1 - 1) {
+            let new_score = input.calc_scenic_score(x_idx, y_idx);
+            if new_score > ans {ans = new_score;}
+        }
+    }
+    ans as u32
+}
 
 #[cfg(test)]
 mod tests {
@@ -107,7 +149,10 @@ mod tests {
         assert_eq!(ans,21)
     }
 
-    //#[test]
-    //fn test_day8p2() {
-    //}
+    #[test]
+    fn test_day8p2() {
+        let out = input_generator(TEST_INPUT);
+        let ans = solve_part2(&out);
+        assert_eq!(ans,8)
+    }
 }
