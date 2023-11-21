@@ -109,7 +109,7 @@ pub fn solve_part1(input: &Forest) -> u32 {
 pub fn solve_part2(input: &Forest) -> u32 {
     let mut ans = 0;
     for y_idx in 1..(input.n_rows - 1) {
-        for x_idx in 1..(input.m_columns - 1 - 1) {
+        for x_idx in 1..(input.m_columns - 1) {
             let new_score = input.calc_scenic_score(x_idx, y_idx);
             if new_score > ans {ans = new_score;}
         }
