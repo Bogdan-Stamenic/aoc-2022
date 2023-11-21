@@ -15,49 +15,56 @@ impl Coords2d {
 
 #[allow(dead_code)]
 struct Rope {
-    head: Coords2d,
-    tail: Coords2d,
+    rope_knots: Vec<Coords2d>,
 }
 
 impl Rope {
     /* Expects to move head only 1 Manhattan dist unit at a time */
     fn rope_sim_step(&mut self, movement: &Coords2d) {
         self.move_head(*movement);
-        let diff = self.head_tail_diff();
-        /* Manhatten distances illustrated:
-         * 43234
-         * 32123
-         * 21 12
-         * 32123
-         * 43234
-         * */
-        match diff.manhattan_dist() {
-            0 => {/*noop*/},
-            1 => {/*noop*/},
-            2 => {
-                match (diff.x, diff.y) {
-                    (_,0) => {self.tail.x += diff.x.signum();},
-                    (0,_) => {self.tail.y += diff.y.signum();},
-                    (_,_) => {/*noop*/},
+        let mut mover_idx = 0;
+        for follower_idx in 1..self.rope_knots.len() {
+            let diff = self.curr_follower_diff(
+                &self.rope_knots[mover_idx],
+                &self.rope_knots[follower_idx],
+                );
+            match diff.manhattan_dist() {
+                0 => {/*noop*/},
+                1 => {/*noop*/},
+                2 => {
+                    match (diff.x, diff.y) {
+                        (_,0) => {//move along x
+                            self.rope_knots[follower_idx].x += diff.x.signum();
+                        },
+                        (0,_) => {//move along y
+                            self.rope_knots[follower_idx].y += diff.y.signum();
+                        },
+                        (_,_) => {/*noop*/},
+                    }
                 }
-            }
-            _ => {/* 3 or 4 */
-                self.tail.x += diff.x.signum();
-                self.tail.y += diff.y.signum();
-            },
+                _ => {/* 3 or 4 */
+                    self.rope_knots[follower_idx].x += diff.x.signum();
+                    self.rope_knots[follower_idx].y += diff.y.signum();
+                },
+            }       
+            mover_idx = follower_idx;
         }
     }
 
     fn move_head(&mut self, movement: Coords2d) {
-        self.head.x += movement.x;
-        self.head.y += movement.y;
+        self.rope_knots[0].x += movement.x;
+        self.rope_knots[0].y += movement.y;
     }
 
-    fn head_tail_diff(&self) -> Coords2d {
+    fn curr_follower_diff(&self, curr: &Coords2d, follower: &Coords2d) -> Coords2d {
         Coords2d {
-            x: self.head.x - self.tail.x,
-            y: self.head.y - self.tail.y,
+            x: curr.x - follower.x,
+            y: curr.y - follower.y,
         }
+    }
+
+    fn get_tail(&self) -> &Coords2d {
+        self.rope_knots.last().unwrap()
     }
 }
 
@@ -65,7 +72,7 @@ impl Rope {
 pub fn input_generator(input: &str) -> Vec<Coords2d> {
     let mut out = Vec::<Coords2d>::new();
     for line in input.lines() {
-        let num = line[2..].parse::<i32>().unwrap();
+        let num = line[2..].parse::<i32>().expect("should be an int");
         match line.bytes().next().unwrap() {
             b'L' => {
                 for _ in 0..num {
@@ -96,26 +103,36 @@ pub fn input_generator(input: &str) -> Vec<Coords2d> {
 #[aoc(day9, part1)]
 pub fn solve_part1(input: &[Coords2d]) -> u32 {
     let mut my_rope = Rope {
-        head: Coords2d { x: 0, y: 0},
-        tail: Coords2d { x: 0, y: 0},
+        rope_knots: vec![Coords2d { x: 0, y: 0}, Coords2d { x: 0, y: 0}],
     };
     let mut uniq_tail_coords = HashSet::<Coords2d>::new();
     uniq_tail_coords.insert(Coords2d {x: 0, y: 0});
     for step in input {
         my_rope.rope_sim_step(step);
-        uniq_tail_coords.insert(my_rope.tail);
+        uniq_tail_coords.insert(*my_rope.get_tail());
     }
     uniq_tail_coords.iter().count() as u32
 }
 
-//#[aoc(day9, part2)]
-//pub fn solve_part2(input: &[Coords2d]) -> u32 {
-//}
+#[aoc(day9, part2)]
+pub fn solve_part2(input: &[Coords2d]) -> u32 {
+    let blah = Coords2d { x: 0, y: 0};
+    let mut my_rope = Rope {
+        rope_knots: vec![blah, blah, blah, blah, blah, blah, blah, blah, blah, blah],
+    };
+    let mut uniq_tail_coords = HashSet::<Coords2d>::new();
+    uniq_tail_coords.insert(Coords2d {x: 0, y: 0});
+    for step in input {
+        my_rope.rope_sim_step(step);
+        uniq_tail_coords.insert(*my_rope.get_tail());
+    }
+    uniq_tail_coords.iter().count() as u32
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    const TEST_INPUT: &str = "R 4
+    const TEST_INPUT1: &str = "R 4
 U 4
 L 3
 D 1
@@ -125,7 +142,7 @@ L 5
 R 2";
     #[test]
     fn test_day9_generator() {
-        let ans = input_generator(TEST_INPUT);
+        let ans = input_generator(TEST_INPUT1);
         /* R 4 */
         assert_eq!(ans[0].x, 1);
         assert_eq!(ans[1].x, 1);
@@ -144,12 +161,30 @@ R 2";
     
     #[test]
     fn test_day9p1() {
-        let input = input_generator(TEST_INPUT);
+        let input = input_generator(TEST_INPUT1);
         let ans = solve_part1(&input);
         assert_eq!(ans, 13);
     }
 
-    //#[test]
-    //fn test_day9p2() {
-    //}
+    #[test]
+    fn test_day9p2_1() {
+        let input = input_generator(TEST_INPUT1);
+        let ans = solve_part2(&input);
+        assert_eq!(ans, 1);
+    }
+
+    const TEST_INPUT2: &str = "R 5
+U 8
+L 8
+D 3
+R 17
+D 10
+L 25
+U 20";
+    #[test]
+    fn test_day9p2_2() {
+        let input = input_generator(TEST_INPUT2);
+        let ans = solve_part2(&input);
+        assert_eq!(ans, 36);
+    }
 }
